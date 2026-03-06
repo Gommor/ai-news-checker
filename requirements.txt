@@ -6,3 +6,4 @@ trafilatura
 beautifulsoup4
 pillow
 playwright
+urllib3
