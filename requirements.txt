@@ -1,0 +1,8 @@
+﻿streamlit>=1.53.0
+google-genai
+python-dotenv
+requests
+trafilatura
+beautifulsoup4
+pillow
+playwright
