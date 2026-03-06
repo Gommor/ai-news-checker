@@ -98,9 +98,9 @@ class VerificationAgent:
             return []
 
         months = {
-            "ocak": 1, "subat": 2, "Ã…Å¸ubat": 2, "mart": 3, "nisan": 4, "mayis": 5, "mayÃ„Â±s": 5,
-            "haziran": 6, "temmuz": 7, "agustos": 8, "aÃ„Å¸ustos": 8, "eylul": 9, "eylÃƒÂ¼l": 9,
-            "ekim": 10, "kasim": 11, "kasÃ„Â±m": 11, "aralik": 12, "aralÃ„Â±k": 12,
+            "ocak": 1, "subat": 2, "şubat": 2, "mart": 3, "nisan": 4, "mayis": 5, "mayıs": 5,
+            "haziran": 6, "temmuz": 7, "agustos": 8, "ağustos": 8, "eylul": 9, "eylül": 9,
+            "ekim": 10, "kasim": 11, "kasım": 11, "aralik": 12, "aralık": 12,
             "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
             "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
             "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6, "jul": 7, "aug": 8,
@@ -120,7 +120,7 @@ class VerificationAgent:
             except ValueError:
                 pass
 
-        for d, mon, y in re.findall(r"\b(\d{1,2})\s+([A-Za-zÃƒâ€¡Ã„Å¾Ã„Â°Ãƒâ€“Ã…Å¾ÃƒÅ“ÃƒÂ§Ã„Å¸Ã„Â±ÃƒÂ¶Ã…Å¸ÃƒÂ¼]+),?\s+(\d{4})\b", text, flags=re.IGNORECASE):
+        for d, mon, y in re.findall(r"\b(\d{1,2})\s+([A-Za-zÇĞİÖŞÜçğıöşü]+),?\s+(\d{4})\b", text, flags=re.IGNORECASE):
             month_num = months.get(mon.lower())
             if not month_num:
                 continue
@@ -155,16 +155,16 @@ class VerificationAgent:
         if detected_dates:
             return (
                 f"TARIH KURALLARI:\n"
-                f"- BugÃƒÂ¼nÃƒÂ¼n tarihi {today}.\n"
-                f"- AÃƒÂ§Ã„Â±k yazÃ„Â±lan yÃ„Â±l asla deÃ„Å¸iÃ…Å¸tirilmez.\n"
-                f"- Tespit edilen aÃƒÂ§Ã„Â±k tarihler: {', '.join(detected_dates)}\n"
-                f"- YÃ„Â±l yazmÃ„Â±yorsa otomatik mevcut yÃ„Â±l varsayma."
+                f"- Bugünün tarihi {today}.\n"
+                f"- Açık yazılan yıl asla değiştirilmez.\n"
+                f"- Tespit edilen açık tarihler: {', '.join(detected_dates)}\n"
+                f"- Yıl yazmıyorsa otomatik mevcut yıl varsayma."
             )
         return (
             f"TARIH KURALLARI:\n"
-            f"- BugÃƒÂ¼nÃƒÂ¼n tarihi {today}.\n"
-            f"- AÃƒÂ§Ã„Â±k yazÃ„Â±lan yÃ„Â±l asla deÃ„Å¸iÃ…Å¸tirilmez.\n"
-            f"- YÃ„Â±l yazmÃ„Â±yorsa otomatik mevcut yÃ„Â±l varsayma."
+            f"- Bugünün tarihi {today}.\n"
+            f"- Açık yazılan yıl asla değiştirilmez.\n"
+            f"- Yıl yazmıyorsa otomatik mevcut yıl varsayma."
         )
 
     def _complete_brief(self, text, max_chars=520):
@@ -224,11 +224,11 @@ class VerificationAgent:
             return (
                 "[KISA OZET]\n"
                 "KARAR: Supheli\n"
-                "GÃƒÅ“VEN SKORU: %0\n"
-                "KISACA: Ãƒâ€¡Ã„Â±ktÃ„Â± ÃƒÂ¼retilemedi. LÃƒÂ¼tfen tekrar deneyin.\n"
+                "GÜVEN SKORU: %0\n"
+                "KISACA: Çıktı üretilemedi. Lütfen tekrar deneyin.\n"
                 "[KISA OZET SONU]\n\n"
                 "[DETAY]\n"
-                "DETAYLI ANALIZ: Ãƒâ€¡Ã„Â±ktÃ„Â± ÃƒÂ¼retilemedi.\n"
+                "DETAYLI ANALIZ: Çıktı üretilemedi.\n"
                 "KAYNAKLAR: Yok\n"
                 "[DETAY SONU]"
             )
@@ -264,21 +264,21 @@ class VerificationAgent:
         return (
             "[KISA OZET]\n"
             "KARAR: Supheli\n"
-            "GÃƒÅ“VEN SKORU: %50\n"
+            "GÜVEN SKORU: %50\n"
             f"KISACA: {self._complete_brief(content, 380)}\n"
             "[KISA OZET SONU]\n\n"
             "[DETAY]\n"
             "DETAYLI ANALIZ:\n"
-            "## Ã„Â°ddianÃ„Â±n Ãƒâ€¡erÃƒÂ§evesi\n"
+            "## İddianın Çerçevesi\n"
             f"{content}\n\n"
-            "## Destekleyen ve Ãƒâ€¡eliÃ…Å¸en Bulgular\n"
-            "Ã„Â°ddiayÃ„Â± destekleyen ve ÃƒÂ§eliÃ…Å¸en unsurlar birlikte deÃ„Å¸erlendirildi.\n\n"
-            "## MantÃ„Â±ksal DeÃ„Å¸erlendirme\n"
-            "Ãƒâ€¡Ã„Â±karÃ„Â±mlarÃ„Â±n dayanaklarÃ„Â± ve olasÃ„Â± varsayÃ„Â±mlar kontrol edildi.\n\n"
-            "## Kaynak ve GÃƒÂ¼venilirlik\n"
-            "KaynaklarÃ„Â±n gÃƒÂ¼venilirliÃ„Å¸i ve tutarlÃ„Â±lÃ„Â±Ã„Å¸Ã„Â± karÃ…Å¸Ã„Â±laÃ…Å¸tÃ„Â±rÃ„Â±ldÃ„Â±.\n\n"
-            "## DerlenmiÃ…Å¸ SonuÃƒÂ§\n"
-            "Kesin hÃƒÂ¼kÃƒÂ¼m dayatmadan, eldeki bulgularÃ„Â±n derlenmiÃ…Å¸ ÃƒÂ¶zeti sunuldu.\n"
+            "## Destekleyen ve Çelişen Bulgular\n"
+            "İddiayı destekleyen ve çelişen unsurlar birlikte değerlendirildi.\n\n"
+            "## Mantıksal Değerlendirme\n"
+            "Çıkarımların dayanakları ve olası varsayımlar kontrol edildi.\n\n"
+            "## Kaynak ve Güvenilirlik\n"
+            "Kaynakların güvenilirliği ve tutarlılığı karşılaştırıldı.\n\n"
+            "## Derlenmiş Sonuç\n"
+            "Kesin hüküm dayatmadan, eldeki bulguların derlenmiş özeti sunuldu.\n"
             "KAYNAKLAR: Yok\n"
             "[DETAY SONU]"
         )
@@ -304,7 +304,7 @@ class VerificationAgent:
         normalized = self._normalize_links(links)
         if not normalized:
             return ""
-        header = "## Bibliography (Found Web Links)" if self.language == "EN" else "## KaynakÃƒÂ§a (Ã„Â°nternetten Bulunan Linkler)"
+        header = "## Bibliography (Found Web Links)" if self.language == "EN" else "## Kaynakça (İnternetten Bulunan Linkler)"
         lines = "\n".join([f"- {lnk}" for lnk in normalized[:12]])
         return f"{header}\n{lines}".strip()
 
@@ -317,7 +317,7 @@ class VerificationAgent:
         if not block:
             return text
 
-        if "## Bibliography (Found Web Links)" in text or "## KaynakÃƒÂ§a (Ã„Â°nternetten Bulunan Linkler)" in text:
+        if "## Bibliography (Found Web Links)" in text or "## Kaynakça (İnternetten Bulunan Linkler)" in text:
             return text
 
         if self.language == "EN":
@@ -389,33 +389,33 @@ SOURCES: (list links)
 """
         else:
             fix_prompt = f"""
-Raporu aÃ…Å¸aÃ„Å¸Ã„Â±daki formata tam uyacak Ã…Å¸ekilde yeniden yaz.
-KISACA 2-3 cÃƒÂ¼mle olsun.
-[DETAY] bÃƒÂ¶lÃƒÂ¼mÃƒÂ¼ uzun, kanÃ„Â±t odaklÃ„Â± ve akÃ„Â±cÃ„Â± mantÃ„Â±ksal anlatÃ„Â±m olsun (maddeleme yapma).
-BaÃ…Å¸lÃ„Â±klar kullan.
-Her baÃ…Å¸lÃ„Â±k altÃ„Â±nda en az 5-7 cÃƒÂ¼mlelik doyurucu aÃƒÂ§Ã„Â±klama yaz.
-Toplam [DETAY] uzunluÃ„Å¸u en az 2200 karakter olsun.
-SonuÃƒÂ§ bÃƒÂ¶lÃƒÂ¼mÃƒÂ¼nde zorunlu doÃ„Å¸ru/yanlÃ„Â±Ã…Å¸ hÃƒÂ¼kmÃƒÂ¼ verme; elde edilen bilgilerin derlenmiÃ…Å¸ ve toparlanmÃ„Â±Ã…Å¸ ÃƒÂ¶zetini ver.
+Raporu aşağıdaki formata tam uyacak şekilde yeniden yaz.
+KISACA 2-3 cümle olsun.
+[DETAY] bölümü uzun, kanıt odaklı ve akıcı mantıksal anlatım olsun (maddeleme yapma).
+Başlıklar kullan.
+Her başlık altında en az 5-7 cümlelik doyurucu açıklama yaz.
+Toplam [DETAY] uzunluğu en az 2200 karakter olsun.
+Sonuç bölümünde zorunlu doğru/yanlış hükmü verme; elde edilen bilgilerin derlenmiş ve toparlanmış özetini ver.
 
-BAÃ„Å¾LAM:
+BAĞLAM:
 {context_text}
 
-MEVCUT Ãƒâ€¡IKTI:
+MEVCUT ÇIKTI:
 {current_output}
 
 [KISA OZET]
 KARAR: (Dogru / Yanlis / Supheli)
-GÃƒÅ“VEN SKORU: (%0-100)
-KISACA: (2-3 cÃƒÂ¼mle)
+GÜVEN SKORU: (%0-100)
+KISACA: (2-3 cümle)
 [KISA OZET SONU]
 
 [DETAY]
 DETAYLI ANALIZ:
-## Ã„Â°ddianÃ„Â±n Ãƒâ€¡erÃƒÂ§evesi
-## Destekleyen ve Ãƒâ€¡eliÃ…Å¸en Bulgular
-## MantÃ„Â±ksal DeÃ„Å¸erlendirme
-## Kaynak ve GÃƒÂ¼venilirlik
-## DerlenmiÃ…Å¸ SonuÃƒÂ§
+## İddianın Çerçevesi
+## Destekleyen ve Çelişen Bulgular
+## Mantıksal Değerlendirme
+## Kaynak ve Güvenilirlik
+## Derlenmiş Sonuç
 KAYNAKLAR: (linkleri yaz)
 [DETAY SONU]
 """
@@ -454,7 +454,7 @@ KAYNAKLAR: (linkleri yaz)
             q = queries[i] if i < len(queries) else f"query_{i+1}"
             links = self._extract_links(res)
             all_links.extend(links)
-            source_lines = "\n".join([f"  - {lnk}" for lnk in links[:5]]) if links else "  - (link bulunamadÃ„Â±)"
+            source_lines = "\n".join([f"  - {lnk}" for lnk in links[:5]]) if links else "  - (link bulunamadı)"
             sections.append(f"[EVIDENCE {i+1}] QUERY: {q}\nRESULTS:\n{res}\nEXTRACTED LINKS:\n{source_lines}")
 
         merged = "\n\n".join(sections)
@@ -482,9 +482,9 @@ KAYNAKLAR: (linkleri yaz)
                 "In the conclusion, synthesize findings instead of forcing a strict true/false judgement."
             )
             deep_detail_tr = (
-                "[DETAY] bÃƒÂ¶lÃƒÂ¼mÃƒÂ¼nde uzun, okunabilir ve mantÃ„Â±ksal akÃ„Â±Ã…Å¸lÃ„Â± bir anlatÃ„Â±m yaz; baÃ…Å¸lÃ„Â±klar kullan. "
-                "Her baÃ…Å¸lÃ„Â±k altÃ„Â±nda en az 5-7 cÃƒÂ¼mlelik aÃƒÂ§Ã„Â±klama ver. [DETAY] bÃƒÂ¶lÃƒÂ¼mÃƒÂ¼ en az 2200 karakter olsun. "
-                "Son bÃƒÂ¶lÃƒÂ¼mde zorunlu doÃ„Å¸ru/yanlÃ„Â±Ã…Å¸ hÃƒÂ¼kmÃƒÂ¼ yerine elde edilen bilgileri derleyip toparlayan bir sonuÃƒÂ§ yaz."
+                "[DETAY] bölümünde uzun, okunabilir ve mantıksal akışlı bir anlatım yaz; başlıklar kullan. "
+                "Her başlık altında en az 5-7 cümlelik açıklama ver. [DETAY] bölümü en az 2200 karakter olsun. "
+                "Son bölümde zorunlu doğru/yanlış hükmü yerine elde edilen bilgileri derleyip toparlayan bir sonuç yaz."
             )
 
             selected_generation_config = dict(self.generation_config)
@@ -508,16 +508,16 @@ KAYNAKLAR: (linkleri yaz)
                 )
             else:
                 sys_instr = (
-                    "Sen profesyonel bir teyit uzmanÃ„Â±sÃ„Â±n. "
-                    "Bilgileri analiz ederken kaynaklar arasÃ„Â±ndaki mantÃ„Â±ksal tutarlÃ„Â±lÃ„Â±Ã„Å¸Ã„Â± incele. "
-                    "KRITIK: EÃ„Å¸er link iÃƒÂ§eriÃ„Å¸i verildiyse SADECE o iÃƒÂ§eriÃ„Å¸i analiz et, diÃ„Å¸er kaynaklarÃ„Â± yoksay. "
-                    "Ã„Â°ÃƒÂ§erikte teknik gÃƒÂ¼rÃƒÂ¼ltÃƒÂ¼ olabilir; ID/etiketleri yoksay ve insan tarafÃ„Â±ndan yazÃ„Â±lan anlamÃ„Â± analiz et. "
-                    "TARIH GUVENLIGI: AÃƒÂ§Ã„Â±k yazÃ„Â±lan yÃ„Â±lÃ„Â± birebir koru. "
-                    "2019 gibi bir yÃ„Â±lÃ„Â± 2026'ya ÃƒÂ§evirme. "
-                    "YÃ„Â±l verilmeyen tarihte mevcut yÃ„Â±lÃ„Â± otomatik varsayma. "
-                    "CIKTI KURALI: Ã„Â°stenen tÃƒÂ¼m bÃƒÂ¶lÃƒÂ¼m etiketlerini eksiksiz ve aynÃ„Â± Ã…Å¸ekilde yaz. "
-                    "KISA OZET KURALI: KISACA 2-3 cÃƒÂ¼mle olsun. "
-                    "DETAY KURALI: Uzun ve kapsamlÃ„Â± aÃƒÂ§Ã„Â±klamayÃ„Â± sadece [DETAY] bÃƒÂ¶lÃƒÂ¼mÃƒÂ¼nde ver."
+                    "Sen profesyonel bir teyit uzmanısın. "
+                    "Bilgileri analiz ederken kaynaklar arasındaki mantıksal tutarlılığı incele. "
+                    "KRITIK: Eğer link içeriği verildiyse SADECE o içeriği analiz et, diğer kaynakları yoksay. "
+                    "İçerikte teknik gürültü olabilir; ID/etiketleri yoksay ve insan tarafından yazılan anlamı analiz et. "
+                    "TARIH GUVENLIGI: Açık yazılan yılı birebir koru. "
+                    "2019 gibi bir yılı 2026'ya çevirme. "
+                    "Yıl verilmeyen tarihte mevcut yılı otomatik varsayma. "
+                    "CIKTI KURALI: İstenen tüm bölüm etiketlerini eksiksiz ve aynı şekilde yaz. "
+                    "KISA OZET KURALI: KISACA 2-3 cümle olsun. "
+                    "DETAY KURALI: Uzun ve kapsamlı açıklamayı sadece [DETAY] bölümünde ver."
                 )
 
             source_links = self._normalize_links(self._extract_raw_urls(original_user_input))
@@ -559,22 +559,22 @@ LINK ICERIGI: {link_content}
 
 {date_guardrails}
 
-GOREV: Sadece yukarÃ„Â±daki link iÃƒÂ§eriÃ„Å¸ini analiz ederek iddiayÃ„Â± deÃ„Å¸erlendir.
+GOREV: Sadece yukarıdaki link içeriğini analiz ederek iddiayı değerlendir.
 
 [KISA OZET]
 KARAR: (Dogru / Yanlis / Supheli)
-GÃƒÅ“VEN SKORU: (%0-100)
-KISACA: (2-3 kÃ„Â±sa cÃƒÂ¼mle)
+GÜVEN SKORU: (%0-100)
+KISACA: (2-3 kısa cümle)
 [KISA OZET SONU]
 
 [DETAY]
 DETAYLI ANALIZ:
-## Ã„Â°ddianÃ„Â±n Ãƒâ€¡erÃƒÂ§evesi
-## Destekleyen ve Ãƒâ€¡eliÃ…Å¸en Bulgular
-## MantÃ„Â±ksal DeÃ„Å¸erlendirme
-## Kaynak ve GÃƒÂ¼venilirlik
-## DerlenmiÃ…Å¸ SonuÃƒÂ§
-KAYNAKLAR: YukarÃ„Â±da verilen link
+## İddianın Çerçevesi
+## Destekleyen ve Çelişen Bulgular
+## Mantıksal Değerlendirme
+## Kaynak ve Güvenilirlik
+## Derlenmiş Sonuç
+KAYNAKLAR: Yukarıda verilen link
 [DETAY SONU]
 {deep_detail_tr}
 """
@@ -601,8 +601,8 @@ Write only queries separated by commas.
             else:
                 planner_prompt = f"""
 Girdi: {user_input}
-Bu iddiayÃ„Â± teyit etmek iÃƒÂ§in Google'da aratÃ„Â±lmasÃ„Â± gereken en etkili 3 terimi ÃƒÂ¼ret.
-Sadece terimleri virgÃƒÂ¼lle ayÃ„Â±rarak yaz.
+Bu iddiayı teyit etmek için Google'da aratılması gereken en etkili 3 terimi üret.
+Sadece terimleri virgülle ayırarak yaz.
 """
 
             image_parts = None
@@ -662,22 +662,22 @@ ARAMA SONUCLARI: {all_evidence}
 
 {date_guardrails}
 
-GOREV: Arama kanÃ„Â±tlarÃ„Â±nÃ„Â± analiz ederek iddiayÃ„Â± deÃ„Å¸erlendir.
+GOREV: Arama kanıtlarını analiz ederek iddiayı değerlendir.
 
 [KISA OZET]
 KARAR: (Dogru / Yanlis / Supheli)
-GÃƒÅ“VEN SKORU: (%0-100)
-KISACA: (2-3 kÃ„Â±sa cÃƒÂ¼mle)
+GÜVEN SKORU: (%0-100)
+KISACA: (2-3 kısa cümle)
 [KISA OZET SONU]
 
 [DETAY]
 DETAYLI ANALIZ:
-## Ã„Â°ddianÃ„Â±n Ãƒâ€¡erÃƒÂ§evesi
-## Destekleyen ve Ãƒâ€¡eliÃ…Å¸en Bulgular
-## MantÃ„Â±ksal DeÃ„Å¸erlendirme
-## Kaynak ve GÃƒÂ¼venilirlik
-## DerlenmiÃ…Å¸ SonuÃƒÂ§
-KAYNAKLAR: (AÃ…Å¸aÃ„Å¸Ã„Â±daki listeden seÃƒÂ§, uydurma link yazma)
+## İddianın Çerçevesi
+## Destekleyen ve Çelişen Bulgular
+## Mantıksal Değerlendirme
+## Kaynak ve Güvenilirlik
+## Derlenmiş Sonuç
+KAYNAKLAR: (Aşağıdaki listeden seç, uydurma link yazma)
 [DETAY SONU]
 {deep_detail_tr}
 MEVCUT LINKLER:
@@ -701,8 +701,8 @@ MEVCUT LINKLER:
             error_msg = str(e)
             if self.language == "EN":
                 if "429" in error_msg:
-                    return "Ã¢Å¡Â Ã¯Â¸Â **API Quota Exceeded**\nPlease try again in a few minutes."
-                return f"Ã¢Å¡Â Ã¯Â¸Â **Analysis Error:** {error_msg}"
+                    return "⚠️ **API Quota Exceeded**\nPlease try again in a few minutes."
+                return f"⚠️ **Analysis Error:** {error_msg}"
             if "429" in error_msg:
-                return "Ã¢Å¡Â Ã¯Â¸Â **API KotasÃ„Â± AÃ…Å¸Ã„Â±ldÃ„Â±**\nLÃƒÂ¼tfen birkaÃƒÂ§ dakika sonra tekrar deneyin."
-            return f"Ã¢Å¡Â Ã¯Â¸Â **Analiz HatasÃ„Â±:** {error_msg}"
+                return "⚠️ **API Kotası Aşıldı**\nLütfen birkaç dakika sonra tekrar deneyin."
+            return f"⚠️ **Analiz Hatası:** {error_msg}"
