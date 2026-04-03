@@ -1,5 +1,6 @@
 ﻿import os
 import re
+import time
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -7,7 +8,7 @@ from dotenv import load_dotenv
 from agent_logic import VerificationAgent
 from utils import extract_urls, scrape_url
 
-# Çevresel değişkenleri yükle
+# Load environment
 load_dotenv()
 
 st.set_page_config(page_title="DeepVerify 2026", layout="wide", page_icon="🛡️")
@@ -37,8 +38,141 @@ LANGUAGES = {
     },
 }
 
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+
+def _parse_assistant_content(content: str):
+    text = content or ""
+    short_summary = ""
+    detailed_part = ""
+
+    if "[KISA OZET]" in text:
+        try:
+            short_summary = text.split("[KISA OZET]", 1)[1].split("[KISA OZET SONU]", 1)[0].strip()
+        except Exception:
+            short_summary = ""
+        try:
+            detailed_part = text.split("[DETAY]", 1)[1].split("[DETAY SONU]", 1)[0].strip()
+        except Exception:
+            detailed_part = ""
+    elif "[SHORT SUMMARY]" in text:
+        try:
+            short_summary = text.split("[SHORT SUMMARY]", 1)[1].split("[SHORT SUMMARY END]", 1)[0].strip()
+        except Exception:
+            short_summary = ""
+        try:
+            detailed_part = text.split("[DETAILS]", 1)[1].split("[DETAILS END]", 1)[0].strip()
+        except Exception:
+            detailed_part = ""
+    else:
+        short_summary = text.strip()
+
+    return short_summary, detailed_part
+
+
+def _extract_short_fields(short_summary: str):
+    karar = ""
+    guven = ""
+    kisaca = ""
+
+    for line in (short_summary or "").split("\n"):
+        line = line.strip()
+        if line.startswith("KARAR:") or line.startswith("DECISION:"):
+            karar = line
+        elif line.startswith("GÜVEN SKORU:") or line.startswith("CONFIDENCE SCORE:"):
+            guven = line
+        elif line.startswith("KISACA:") or line.startswith("BRIEFLY:"):
+            kisaca = line
+
+    return karar, guven, kisaca
+
+
+def _stream_markdown_text(text: str, placeholder, delay: float = 0.01, chunk_tokens: int = 10):
+    raw = text or ""
+    if not raw:
+        placeholder.markdown("")
+        return
+
+    # Keep whitespace/newlines so markdown headings and sections stay intact while streaming.
+    tokens = re.findall(r"\S+|\s+", raw)
+    built = []
+    for i, token in enumerate(tokens, start=1):
+        built.append(token)
+        if i % chunk_tokens == 0 or i == len(tokens):
+            placeholder.markdown("".join(built))
+            time.sleep(delay)
+
+
+def _render_assistant(content: str, lang: dict, animate: bool = False):
+    short_summary, detailed_part = _parse_assistant_content(content)
+
+    st.divider()
+
+    lowered = (short_summary or "").lower()
+    if "doğru" in lowered or "true" in lowered:
+        st.success(lang["result_true"])
+    elif "yanlış" in lowered or "false" in lowered:
+        st.error(lang["result_false"])
+    elif "şüpheli" in lowered or "uncertain" in lowered:
+        st.warning(lang["result_uncertain"])
+
+    karar, guven, kisaca = _extract_short_fields(short_summary)
+
+    if karar:
+        st.markdown(f"**{karar}**")
+    if guven:
+        st.markdown(f"**{guven}**")
+    if kisaca:
+        if animate:
+            ph = st.empty()
+            _stream_markdown_text(f"*{kisaca}*", ph, delay=0.01, chunk_tokens=8)
+        else:
+            st.markdown(f"*{kisaca}*")
+
+    if detailed_part:
+        with st.expander(lang["detailed_analysis"]):
+            if animate:
+                ph = st.empty()
+                _stream_markdown_text(detailed_part, ph, delay=0.005, chunk_tokens=14)
+            else:
+                st.markdown(detailed_part)
+
+    st.divider()
+
+
+def _sanitize_for_context(text: str):
+    t = re.sub(r"\s+", " ", (text or "")).strip()
+    t = re.sub(r"^[^\wÇĞİÖŞÜçğıöşü]+", "", t)
+    return t
+
+
+def _build_conversation_context(messages, max_items: int = 6):
+    if not messages:
+        return ""
+
+    rows = []
+    for m in messages[-max_items:]:
+        role = m.get("role", "")
+        raw = m.get("content", "")
+
+        if role == "assistant":
+            short_summary, _ = _parse_assistant_content(raw)
+            raw = short_summary or raw
+            tag = "ASSISTANT"
+        elif role == "user":
+            tag = "USER"
+        else:
+            continue
+
+        cleaned = _sanitize_for_context(raw)
+        if not cleaned:
+            continue
+        rows.append(f"{tag}: {cleaned[:420]}")
+
+    return "\n".join(rows)
+
 
 gemini_key = os.getenv("GEMINI_API_KEY")
 serp_key = os.getenv("SERP_API_KEY")
@@ -64,57 +198,9 @@ st.markdown("---")
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if message["role"] == "assistant":
-            content = message["content"]
-            short_summary = ""
-            detailed_part = ""
-
-            if "[KISA OZET]" in content or "[SHORT SUMMARY]" in content:
-                if "[KISA OZET]" in content:
-                    short_summary = content.split("[KISA OZET]")[1].split("[KISA OZET SONU]")[0].strip()
-                    detailed_part = content.split("[DETAY]")[1].split("[DETAY SONU]")[0].strip() if "[DETAY]" in content else ""
-                else:
-                    short_summary = content.split("[SHORT SUMMARY]")[1].split("[SHORT SUMMARY END]")[0].strip()
-                    detailed_part = content.split("[DETAILS]")[1].split("[DETAILS END]")[0].strip() if "[DETAILS]" in content else ""
-            else:
-                short_summary = content
-                detailed_part = ""
-
-            st.divider()
-
-            if "Doğru" in short_summary or "True" in short_summary:
-                st.success(lang["result_true"])
-            elif "Yanlış" in short_summary or "False" in short_summary:
-                st.error(lang["result_false"])
-            elif "Şüpheli" in short_summary or "Uncertain" in short_summary:
-                st.warning(lang["result_uncertain"])
-
-            karar = ""
-            guven = ""
-            kisaca = ""
-
-            lines = short_summary.split("\n")
-            for line in lines:
-                if line.startswith("KARAR:") or line.startswith("DECISION:"):
-                    karar = line
-                elif line.startswith("GÜVEN SKORU:") or line.startswith("CONFIDENCE SCORE:"):
-                    guven = line
-                elif line.startswith("KISACA:") or line.startswith("BRIEFLY:"):
-                    kisaca = line
-
-            if karar:
-                st.markdown(f"**{karar}**")
-            if guven:
-                st.markdown(f"**{guven}**")
-            if kisaca:
-                st.markdown(f"*{kisaca}*")
-
-            if detailed_part:
-                with st.expander(lang["detailed_analysis"]):
-                    st.markdown(detailed_part)
-
-            st.divider()
+            _render_assistant(message.get("content", ""), lang, animate=False)
         else:
-            st.markdown(message["content"])
+            st.markdown(message.get("content", ""))
             if "files_info" in message:
                 st.caption(message["files_info"])
 
@@ -127,20 +213,21 @@ if chat_input:
     with st.chat_message("user"):
         st.markdown(user_message)
 
+    # Build conversational context from previous turns (excluding the just-added user line).
+    conversation_context = _build_conversation_context(st.session_state.messages[:-1], max_items=8)
+
     with st.spinner(lang["analyzing"]):
         urls = extract_urls(chat_input.text)
         link_data = scrape_url(urls[0]) if urls else ""
 
-        if urls:
-            preview = re.sub(r"\[TWEET_UTC_TIME\].*?\[/TWEET_UTC_TIME\]\s*", "", link_data or "", flags=re.IGNORECASE | re.DOTALL)
-            preview = re.sub(r"\[TWEET_SOURCE\].*?\[/TWEET_SOURCE\]\s*", "", preview, flags=re.IGNORECASE | re.DOTALL)
-            st.info(
-                f"🔗 Link bulundu: {urls[0][:50]}...\n📄 İçerik: {preview[:220]}..."
-                if len(preview) > 220
-                else f"🔗 Link bulundu: {urls[0][:50]}...\n📄 İçerik: {preview}"
-            )
+        result = agent.plan_and_verify(
+            chat_input.text,
+            chat_input.files,
+            link_data,
+            conversation_context=conversation_context,
+        )
 
-        result = agent.plan_and_verify(chat_input.text, chat_input.files, link_data)
-        st.session_state.messages.append({"role": "assistant", "content": result})
+    st.session_state.messages.append({"role": "assistant", "content": result})
 
-    st.rerun()
+    with st.chat_message("assistant"):
+        _render_assistant(result, lang, animate=True)
