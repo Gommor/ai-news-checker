@@ -428,7 +428,7 @@ def scrape_url(url):
         result = _scrape_regular_url(url, session)
 
     _cache_set(cache_key, result)
-    return result
+    return preprocess_text(result)
 
 
 def search_web(query, api_key):
@@ -440,3 +440,12 @@ def search_web(query, api_key):
         return "\n".join([f"- {r.get('title')}: {r.get('snippet')} ({r.get('link')})" for r in results[:3]])
     except Exception:
         return "Arama motoruna ulasilamadi."
+def preprocess_text(text):
+    """NLP analizi öncesi metni standartlaştirir."""
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r'[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ\s]', '', text)
+    text = re.sub(r'\d+', '', text)
+    text = " ".join(text.split())
+    return text
