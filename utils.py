@@ -440,3 +440,9 @@ def search_web(query, api_key):
         return "\n".join([f"- {r.get('title')}: {r.get('snippet')} ({r.get('link')})" for r in results[:3]])
     except Exception:
         return "Arama motoruna ulasilamadi."
+if __name__ == "__main__":
+    
+    test_metni = "Dolar 35 TL oldu! @haberci #sondakika"
+    temiz_metni = preprocess_text(test_metni)
+    print(f"Ham Metin: {test_metni}")
+    print(f"Temizlenmiş Metin (Sayılar Korundu): {temiz_metni}")

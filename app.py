@@ -34,7 +34,7 @@ LANGUAGES = {
         "result_true": "✅ RESULT: TRUE",
         "result_false": "❌ RESULT: FALSE",
         "result_uncertain": "⚠️ RESULT: UNCERTAIN",
-        "detailed_analysis": "📋 Detailed Analysis",
+        "detailed_analysis": "📋 Detailed Analysis.",
     },
 }
 
