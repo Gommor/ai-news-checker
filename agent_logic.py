@@ -27,7 +27,7 @@ class VerificationAgent:
             self.detail_level = "normal"
 
         if self.detail_level == "fast":
-            default_max_queries = 3
+            default_max_queries = 4
             default_detail_min_chars = 700
             default_embedding_top_k = 4
             default_main_tokens = 1600
