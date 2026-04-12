@@ -440,3 +440,4 @@ def search_web(query, api_key):
         return "\n".join([f"- {r.get('title')}: {r.get('snippet')} ({r.get('link')})" for r in results[:3]])
     except Exception:
         return "Arama motoruna ulasilamadi."
+

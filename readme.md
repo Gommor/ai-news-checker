@@ -1,4 +1,5 @@
-﻿# Kurulum (Windows PowerShell)
+﻿> **Project Status:** 🛠️ Active Development - RAG Analysis & Fact-Checking Logic
+---# Kurulum (Windows PowerShell)
 
 1. Sanal ortam oluştur:
    `python -m venv venv`

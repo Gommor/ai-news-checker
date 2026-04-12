@@ -1,4 +1,4 @@
-﻿streamlit
+﻿﻿# Project requirements for Python 3.10+ environment
 streamlit>=1.53.0
 google-genai
 python-dotenv
