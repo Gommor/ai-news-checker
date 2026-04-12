@@ -18,7 +18,7 @@
 ##  .env
    GEMINI_API_KEY=
    SERP_API_KEY=
-- ENABLE_GEMINI_EMBEDDING=1 (opsiyonel, 0 yaparsan embedding kapanir)
+- ENABLE_GEMINI_EMBEDDING=1 (opsiyonel, 0 yaparsan embedding kapanır)
 - GEMINI_EMBEDDING_MODEL=text-embedding-004 (opsiyonel)
 - X_USERNAME=your_x_username
 - X_PASSWORD=your_x_password

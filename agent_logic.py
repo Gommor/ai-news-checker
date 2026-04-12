@@ -1,4 +1,4 @@
-﻿import math
+import math
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -276,7 +276,7 @@ class VerificationAgent:
             filler = (
                 "This conclusion is based on available evidence consistency checks."
                 if self.language == "EN"
-                else "Bu degerlendirme eldeki bulgularin tutarlilik kontrolune dayanmaktadir."
+                else "Bu değerlendirme eldeki bulguların tutarlılık kontrolüne dayanmaktadır."
             )
             while len(selected) < min_sentences and len(selected) < max_sentences:
                 cost = len(filler) + (1 if selected else 0)
@@ -384,10 +384,10 @@ class VerificationAgent:
                 "## Synthesized Conclusion (short)",
             ]
         return [
-            "## Iddianin Cercevesi",
-            "## Destekleyen ve Celisen Bulgular",
-            "## Kaynak ve Guvenilirlik",
-            "## Derlenmis Sonuc (kisa)",
+            "## İddianın Çerçevesi",
+            "## Destekleyen ve Çelişen Bulgular",
+            "## Kaynak ve Güvenilirlik",
+            "## Derlenmiş Sonuç (kısa)",
         ]
 
     def _build_detail_skeleton(self):
@@ -400,11 +400,11 @@ class VerificationAgent:
                 "## Synthesized Conclusion (short)"
             )
         return (
-            "DETAYLI ANALIZ:\n"
-            "## Iddianin Cercevesi\n"
-            "## Destekleyen ve Celisen Bulgular\n"
-            "## Kaynak ve Guvenilirlik\n"
-            "## Derlenmis Sonuc (kisa)"
+            "DETAYLI ANALİZ:\n"
+            "## İddianın Çerçevesi\n"
+            "## Destekleyen ve Çelişen Bulgular\n"
+            "## Kaynak ve Güvenilirlik\n"
+            "## Derlenmiş Sonuç (kısa)"
         )
 
     def _detail_has_required_headings(self, detail_text):
@@ -428,7 +428,7 @@ class VerificationAgent:
 
     def _build_fallback_detail(self, context_text):
         ctx = " ".join((context_text or "").split())
-        ctx_excerpt = ctx[:900] if ctx else "Yeterli kanit metni otomatik olarak sinirli kaldi."
+        ctx_excerpt = ctx[:900] if ctx else "Yeterli kanıt metni otomatik olarak sınırlı kaldı."
 
         if self.language == "EN":
             return (
@@ -451,22 +451,22 @@ class VerificationAgent:
             )
 
         return (
-            "DETAYLI ANALIZ:\\n"
-            "## Iddianin Cercevesi\\n"
-            "Bu iddia, kullanici girdisi ve toplanan kanitlar birlikte ele alinarak degerlendirildi. "
-            "Amac tek bir ifadeyi tekrar etmek degil, iddianin olgusal tutarliligini ve zaman baglamini kontrol etmektir. "
-            "Kanitlar sinirli oldugunda sonuc temkinli bicimde sunulur.\\n\\n"
-            "## Destekleyen ve Celisen Bulgular\\n"
-            f"Kanit ozeti: {ctx_excerpt}. "
-            "Destekleyen noktalar ile celisen noktalar ayni anda okunarak dengeli bir degerlendirme yapildi. "
-            "Farkli kaynaklarda bagimsiz benzerlik arttikca guven artar; ciddi uyumsuzlukta guven dusurulur.\\n\\n"
-            "## Kaynak ve Guvenilirlik\\n"
-            "Kaynaklarin guvenilirligi; baglanti verilebilirlik, icerik tutarliligi ve dogrulanabilirlik kriterleriyle ele alindi. "
-            "Kaynak gostermeyen veya zayif dayanakli ifadeler daha dusuk guvenle yorumlandi. "
-            "Dogrudan baglantili bulgular, dolayli ve belirsiz ifadelere gore daha yuksek agirlik aldi.\\n\\n"
-            "## Derlenmis Sonuc (kisa)\\n"
-            "Elde edilen bulgular bir arada degerlendirildiginde, sonuc mevcut kanitlarla sinirli ama tutarli bir cercevede verildi. "
-            "Daha guclu veya yeni kaynaklar geldikce sonucun guncellenmesi gerekir."
+            "DETAYLI ANALİZ:\\n"
+            "## İddianın Çerçevesi\\n"
+            "Bu iddia, kullanıcı girdisi ve toplanan kanıtlar birlikte ele alınarak değerlendirildi. "
+            "Amaç tek bir ifadeyi tekrar etmek değil, iddianın olgusal tutarlılığını ve zaman bağlamını kontrol etmektir. "
+            "Kanıtlar sınırlı olduğunda sonuç temkinli biçimde sunulur.\\n\\n"
+            "## Destekleyen ve Çelişen Bulgular\\n"
+            f"Kanıt özeti: {ctx_excerpt}. "
+            "Destekleyen noktalar ile çelişen noktalar aynı anda okunarak dengeli bir değerlendirme yapıldı. "
+            "Farklı kaynaklarda bağımsız benzerlik arttıkça güven artar; ciddi uyumsuzlukta güven düşürülür.\\n\\n"
+            "## Kaynak ve Güvenilirlik\\n"
+            "Kaynakların güvenilirliği; bağlantı verilebilirlik, içerik tutarlılığı ve doğrulanabilirlik kriterleriyle ele alındı. "
+            "Kaynak göstermeyen veya zayıf dayanaklı ifadeler daha düşük güvenle yorumlandı. "
+            "Doğrudan bağlantılı bulgular, dolaylı ve belirsiz ifadelere göre daha yüksek ağırlık aldı.\\n\\n"
+            "## Derlenmiş Sonuç (kısa)\\n"
+            "Elde edilen bulgular bir arada değerlendirildiğinde, sonuç mevcut kanıtlarla sınırlı ama tutarlı bir çerçevede verildi. "
+            "Daha güçlü veya yeni kaynaklar geldikçe sonucun güncellenmesi gerekir."
         )
 
     def _ensure_detail_quality(self, normalized_text, context_text, links):
@@ -494,10 +494,10 @@ class VerificationAgent:
                 "[KISA OZET]\n"
                 "KARAR: Şüpheli\n"
                 "GÜVEN SKORU: %0\n"
-                "KISACA: Analiz cikti uretemedi.\n"
+                "KISACA: Analiz çıktı üretemedi.\n"
                 "[KISA OZET SONU]\n\n"
                 "[DETAY]\n"
-                "DETAYLI ANALIZ:\nDetay uretilemedi.\n"
+                "DETAYLI ANALİZ:\nDetay üretilemedi.\n"
                 "[DETAY SONU]"
             )
 
@@ -552,12 +552,12 @@ class VerificationAgent:
             kisaca_seed = (detail or content or "").strip()
         kisaca_text = self._complete_brief(kisaca_seed, min_sentences=2, max_sentences=3, max_chars=420)
         if not kisaca_text:
-            kisaca_text = "Eldeki bulgular birbiriyle tam uyumlu degil. Bu nedenle iddia su an supheli degerlendirildi."
+            kisaca_text = "Eldeki bulgular birbiriyle tam uyumlu değil. Bu nedenle iddia şu an şüpheli değerlendirildi."
         detail_text = (detail or "").strip()
         if self._detail_looks_like_summary(detail_text):
             detail_text = self._build_detail_skeleton()
-        elif not re.search(r"DETAYLI\s+ANALIZ", detail_text, flags=re.IGNORECASE):
-            detail_text = f"DETAYLI ANALIZ:\n{detail_text}"
+        elif not re.search(r"DETAYLI\s+ANAL[Iİ]Z", detail_text, flags=re.IGNORECASE):
+            detail_text = f"DETAYLI ANALİZ:\n{detail_text}"
 
         return (
             "[KISA OZET]\n"
@@ -613,14 +613,14 @@ Baglam:
 {context_text}
 
 Kurallar:
-- Tum bolum etiketleri ayni kalsin.
-- Asagidaki basliklari bu sira ile aynen kullan:
-  - ## Iddianin Cercevesi
-  - ## Destekleyen ve Celisen Bulgular
-  - ## Kaynak ve Guvenilirlik
-  - ## Derlenmis Sonuc (kisa)
-- [DETAY] bolumu mantiksal akisla en az {self.detail_min_chars} karakter olsun.
-- Sonunda kisa bir derlenmis sonuc ver.
+- Tüm bölüm etiketleri aynı kalsın.
+- Aşağıdaki başlıkları bu sıra ile aynen kullan:
+  - ## İddianın Çerçevesi
+  - ## Destekleyen ve Çelişen Bulgular
+  - ## Kaynak ve Güvenilirlik
+  - ## Derlenmiş Sonuç (kısa)
+- [DETAY] bölümü mantıksal akışla en az {self.detail_min_chars} karakter olsun.
+- Sonunda kısa bir derlenmiş sonuç ver.
 """
 
         return self._generate_content(
@@ -660,20 +660,35 @@ Kurallar:
             q = queries[i] if i < len(queries) else f"query_{i + 1}"
             links = self._extract_links(res)
             all_links.extend(links)
+
+            if self.language == "EN":
+                no_link_text = "  - (no link)"
+                evidence_label = "EVIDENCE"
+                query_label = "QUERY"
+                results_label = "RESULTS"
+                extracted_links_label = "EXTRACTED LINKS"
+            else:
+                no_link_text = "  - (link yok)"
+                evidence_label = "KANIT"
+                query_label = "SORGU"
+                results_label = "SONUÇLAR"
+                extracted_links_label = "ÇIKARILAN LİNKLER"
+
             if links:
                 source_lines = "\n".join([f"  - {lnk}" for lnk in links[:5]])
             else:
-                source_lines = "  - (link yok)"
+                source_lines = no_link_text
 
             sections.append(
-                f"[EVIDENCE {i + 1}] QUERY: {q}\n"
-                f"RESULTS:\n{res}\n"
-                f"EXTRACTED LINKS:\n{source_lines}"
+                f"[{evidence_label} {i + 1}] {query_label}: {q}\n"
+                f"{results_label}:\n{res}\n"
+                f"{extracted_links_label}:\n{source_lines}"
             )
 
         merged = "\n\n".join(sections)
         unique_links = self._normalize_links(all_links)
-        links_block = "\n".join([f"- {lnk}" for lnk in unique_links[:12]]) if unique_links else "- (yok)"
+        empty_link_text = "- (none)" if self.language == "EN" else "- (yok)"
+        links_block = "\n".join([f"- {lnk}" for lnk in unique_links[:12]]) if unique_links else empty_link_text
         return merged, links_block, unique_links
 
     def _parse_search_candidates(self, queries, search_results):
@@ -833,12 +848,21 @@ Kurallar:
             link = item.get("link", "")
             if link:
                 links.append(link)
-            lines.append(
-                f"[SEMANTIC EVIDENCE {i}] SCORE: {item['score']:.4f}\n"
-                f"QUERY: {item['query']}\n"
-                f"SNIPPET: {item['text']}\n"
-                f"LINK: {link if link else '-'}"
-            )
+
+            if self.language == "EN":
+                lines.append(
+                    f"[SEMANTIC EVIDENCE {i}] SCORE: {item['score']:.4f}\n"
+                    f"QUERY: {item['query']}\n"
+                    f"SNIPPET: {item['text']}\n"
+                    f"LINK: {link if link else '-'}"
+                )
+            else:
+                lines.append(
+                    f"[ANLAMSAL KANIT {i}] SKOR: {item['score']:.4f}\n"
+                    f"SORGU: {item['query']}\n"
+                    f"METİN: {item['text']}\n"
+                    f"LİNK: {link if link else '-'}"
+                )
 
         return "\n\n".join(lines), self._normalize_links(links)
 
@@ -954,16 +978,16 @@ LINK ICERIGI: {link_content}
 [KISA OZET]
 KARAR: (Doğru / Yanlış / Şüpheli)
 GÜVEN SKORU: (%0-100)
-KISACA: (2-3 kisa cumle, kisa neden belirt)
+KISACA: (2-3 kısa cümle, kısa neden belirt)
 [KISA OZET SONU]
 
 [DETAY]
-DETAYLI ANALIZ:
-## Iddianin Cercevesi
-## Destekleyen ve Celisen Bulgular
-## Kaynak ve Guvenilirlik
-## Derlenmis Sonuc (kisa)
-KAYNAKLAR: Yukaridaki link
+DETAYLI ANALİZ:
+## İddianın Çerçevesi
+## Destekleyen ve Çelişen Bulgular
+## Kaynak ve Güvenilirlik
+## Derlenmiş Sonuç (kısa)
+KAYNAKLAR: Yukarıdaki link
 [DETAY SONU]
 """
 
@@ -1083,16 +1107,16 @@ ANLAMSAL OLARAK SIRALANMIS KANITLAR (Gemini Embedding):
 [KISA OZET]
 KARAR: (Doğru / Yanlış / Şüpheli)
 GÜVEN SKORU: (%0-100)
-KISACA: (2-3 kisa cumle, neden belirt)
+KISACA: (2-3 kısa cümle, neden belirt)
 [KISA OZET SONU]
 
 [DETAY]
-DETAYLI ANALIZ:
-## Iddianin Cercevesi
-## Destekleyen ve Celisen Bulgular
-## Kaynak ve Guvenilirlik
-## Derlenmis Sonuc (kisa)
-KAYNAKLAR: (Sadece MEVCUT LINKLER listesinden sec, uydurma link yazma)
+DETAYLI ANALİZ:
+## İddianın Çerçevesi
+## Destekleyen ve Çelişen Bulgular
+## Kaynak ve Güvenilirlik
+## Derlenmiş Sonuç (kısa)
+KAYNAKLAR: (Sadece MEVCUT LİNKLER listesinden seç, uydurma link yazma)
 [DETAY SONU]
 
 MEVCUT LINKLER:
