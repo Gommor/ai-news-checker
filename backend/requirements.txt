@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+email-validator
+python-multipart
+google-genai
+requests
+trafilatura
+beautifulsoup4
+pillow
+playwright
+urllib3

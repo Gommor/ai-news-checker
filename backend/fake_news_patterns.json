@@ -1,0 +1,7 @@
+[
+  {"label":"sansasyonel kesin ifade", "pattern":"\b(şok|son dakika|inanılmaz|skandal|kesinlikle|herkes bunu konuşuyor)\b", "weight":12},
+  {"label":"kaynak belirsizliği", "pattern":"\b(iddia edildi|söylendi|duyuma göre|bir arkadaşım|gizli kaynak)\b", "weight":14},
+  {"label":"komplo dili", "pattern":"\b(gizli plan|üst akıl|saklıyorlar|medya yazmıyor|bunu sizden gizliyorlar)\b", "weight":18},
+  {"label":"acil yayma çağrısı", "pattern":"\b(hemen paylaş|yayalım|silinmeden izle|herkese gönder)\b", "weight":16},
+  {"label":"kanıtsız ölüm/tutuklama iddiası", "pattern":"\b(öldü|hapisten çıktı|tutuklandı|kaçtı)\b", "weight":10}
+]
