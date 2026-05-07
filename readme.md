@@ -1,28 +1,49 @@
-﻿> **Project Status:** 🛠️ Active Development - RAG Analysis & Fact-Checking Logic
----# Kurulum (Windows PowerShell)
+﻿# DeepVerify Pro Max
 
-1. Sanal ortam oluştur:
-   `python -m venv venv`
+FastAPI + React/Vite tabanlı, ChatGPT benzeri arayüze sahip kanıt odaklı dezenformasyon doğrulama sistemi.
 
-2. Sanal ortamı aktif et:
-   `venv\Scripts\Activate.ps1`
+## Pro katmanlar
+- Orijinal `agent_logic.py` ve `utils.py` korunmuştur.
+- SerpAPI + Gemini RAG akışı ana algoritmadır.
+- Opsiyonel NewsAPI canlı haber sinyali eklendi.
+- X/Twitter için SerpAPI public-index araması eklendi.
+- Fake-news pattern dataset destekli risk skoru eklendi.
+- Kaynak kalite ağırlığı ve güven skoru yeniden kalibrasyonu eklendi.
+- Login/register, SQLite, sohbet geçmişi ve ChatGPT tarzı UI vardır.
 
-3. Bağımlılıkları kur:
-   `pip install -r requirements.txt`
+## Çalıştırma
 
-4. Playwright tarayıcısını kur:
-   `python -m playwright install chromium`
+Backend:
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+```
 
-5. Uygulamayı çalıştır:
-   `python -m streamlit run app.py`
+Frontend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-##  .env
-   GEMINI_API_KEY=
-   SERP_API_KEY=
-- ENABLE_GEMINI_EMBEDDING=1 (opsiyonel, 0 yaparsan embedding kapanır)
-- GEMINI_EMBEDDING_MODEL=text-embedding-004 (opsiyonel)
-- X_USERNAME=your_x_username
-- X_PASSWORD=your_x_password
-- X_PLAYWRIGHT_STORAGE_STATE=x_storage_state.json
-- X_PLAYWRIGHT_HEADLESS=1
-- X_PLAYWRIGHT_TIMEOUT_MS=35000
+## .env
+`backend/.env.example` dosyasını `backend/.env` olarak kopyala ve keyleri yaz.
+
+
+## NewsAPI Key Nasıl Alınır?
+1. https://newsapi.org/register adresine gir.
+2. Ücretsiz hesap oluştur ve e-posta doğrulamasını yap.
+3. Dashboard ekranındaki API key'i kopyala.
+4. `backend/.env` içine şunu ekle:
+
+```env
+NEWS_API_KEY=BURAYA_NEWSAPI_KEY
+```
+
+NewsAPI opsiyoneldir. Key yoksa proje SerpAPI + Gemini ile çalışmaya devam eder; key eklenirse canlı haber sinyali de algoritmaya dahil edilir.
+
+## v8 Güncellemesi
+- Detaylı analiz varsayılan olarak kapalı gelir; tıklanınca açılır.
+- UI bozulmadan ChatGPT tarzı sade sonuç akışı korunur.
+- `.env.example` içinde NewsAPI ve detaylı analiz ayarları hazırdır.
