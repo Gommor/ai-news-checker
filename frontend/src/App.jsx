@@ -42,7 +42,6 @@ const UI = {
     detail: "Detaylı analiz",
     openDetail: "Aç / kapat",
     sources: "Kaynaklar",
-    raw: "Ham model çıktısı",
     noSource: "Kaynak bulunamadı.",
     confidenceNote: "Bu skor, kaynaklara göre verilen kararın güven oranıdır.",
     missing: "Lütfen iddia yazın veya görsel/dosya yükleyin.",
@@ -97,7 +96,6 @@ const UI = {
     detail: "Detailed analysis",
     openDetail: "Open / close",
     sources: "Sources",
-    raw: "Raw model output",
     noSource: "No source found.",
     confidenceNote: "This score is the confidence level of the decision based on sources.",
     missing: "Please write a claim or upload an image/file.",
@@ -145,6 +143,21 @@ function renderAnalysisText(text = "") {
   const lines = cleanAnalysisText(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const blocks = [];
   let paragraph = [];
+  const bulletPrefix = /^[-*•]\s+/;
+  const numberedPrefix = /^\d+[.)]\s+/;
+  const sourceLead = /^(?:(?:kaynak|source|kanıt|kanit|evidence)\s+\d+\s*[:.)-]?|bu\s+(?:kanıt|kanit)(?:\s+da)?\b|this\s+evidence\b)/i;
+  const sourceLabel = /^((?:kaynak|source|kanıt|kanit|evidence)\s+\d+)\s*[:.)-]?\s*(.*)$/i;
+
+  const bulletContent = (line) => {
+    const cleaned = line.replace(bulletPrefix, "").replace(numberedPrefix, "");
+    const match = cleaned.match(sourceLabel);
+    if (!match) return cleaned;
+    return (
+      <>
+        <strong>{match[1]}:</strong> {match[2]}
+      </>
+    );
+  };
 
   const flush = () => {
     if (!paragraph.length) return;
@@ -159,12 +172,12 @@ function renderAnalysisText(text = "") {
       return;
     }
 
-    if (/^[-*]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
+    if (bulletPrefix.test(line) || numberedPrefix.test(line) || sourceLead.test(line)) {
       flush();
       blocks.push(
         <div className="analysis-bullet" key={`b-${blocks.length}`}>
           <span />
-          <p>{line.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "")}</p>
+          <p>{bulletContent(line)}</p>
         </div>
       );
       return;
@@ -254,8 +267,6 @@ function ResultMessage({ result, t }) {
           {result?.pro_pipeline && <span className="pro-pill">PRO</span>}
         </div>
 
-        <p className="confidence-note">{result.guven_aciklamasi || t.confidenceNote}</p>
-
         <section className="answer-section">
           <h3>{t.summary}</h3>
           <p>{result.kisa_ozet}</p>
@@ -283,7 +294,6 @@ function ResultMessage({ result, t }) {
             </div>
           ) : <p>{t.noSource}</p>}
         </section>
-        <details className="raw"><summary>{t.raw}</summary><pre>{result.raw}</pre></details>
       </div>
     </article>
   );

@@ -431,15 +431,18 @@ def scrape_url(url):
     return result
 
 
-def search_web(query, api_key):
+def search_web(query, api_key, hl="tr", gl="tr"):
     """SerpAPI kullanarak Google aramasi yapar."""
     if not api_key:
         return "Arama motoru anahtari tanimli degil."
 
+    hl = (hl or "tr").strip().lower()
+    gl = (gl or "tr").strip().lower()
+
     try:
         response = requests.get(
             "https://serpapi.com/search.json",
-            params={"q": query, "api_key": api_key, "num": 5, "hl": "tr", "gl": "tr"},
+            params={"q": query, "api_key": api_key, "num": 5, "hl": hl, "gl": gl},
             timeout=12,
         )
         response.raise_for_status()

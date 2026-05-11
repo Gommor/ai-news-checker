@@ -439,7 +439,7 @@ button { cursor: pointer; }
 }
 .analysis-text {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 .analysis-text h4 {
   margin: 10px 0 0;
@@ -452,6 +452,7 @@ button { cursor: pointer; }
   grid-template-columns: 9px 1fr;
   gap: 10px;
   align-items: start;
+  margin: 2px 0;
 }
 .analysis-bullet span {
   width: 6px;
@@ -460,6 +461,11 @@ button { cursor: pointer; }
   border-radius: 50%;
   background: #14b8a6;
 }
+.analysis-bullet strong {
+  color: #67e8f9;
+  font-weight: 900;
+}
+.light .analysis-bullet strong { color: #0f766e; }
 
 .source-list.plain-sources { display: grid; gap: 8px; margin-top: 8px; }
 .plain-sources a {
@@ -502,19 +508,6 @@ button { cursor: pointer; }
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.raw { margin-top: 18px; opacity: .74; }
-.raw summary { cursor: pointer; font-weight: 850; }
-.raw pre {
-  max-height: 260px;
-  white-space: pre-wrap;
-  overflow: auto;
-  margin: 12px 0 0;
-  padding: 12px;
-  border-radius: 10px;
-  background: rgba(0,0,0,.18);
-  font-size: 12px;
-}
-
 /* COMPOSER */
 .composer-wrap {
   position: fixed;

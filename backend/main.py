@@ -166,7 +166,6 @@ class AnalyzeResponse(BaseModel):
     analiz_modu: str
     dil: str
     generated_at: str
-    raw: str
     chat_id: Optional[int] = None
     kaynak_kalite_ortalamasi: Optional[float] = None
     pro_pipeline: Optional[dict] = None
@@ -254,6 +253,61 @@ def _clean_sources(raw_sources: list[str]) -> list[str]:
     return list(dict.fromkeys(cleaned))[:12]
 
 
+def _remove_inline_evidence_label_urls(text: str) -> str:
+    value = text or ""
+    evidence_labels = r"(?:ANLAMSAL\s+KANIT|KANIT|SEMANTIC\s+EVIDENCE|EVIDENCE)"
+    url_like = r"(?:https?://)?(?:www\.)?[A-Za-z0-9.-]+\.[A-Za-z]{2,}[^\s)]*"
+    return re.sub(
+        rf"(\[\s*{evidence_labels}\s+\d+\s*\])\s*\(\s*{url_like}\s*\)",
+        r"\1",
+        value,
+        flags=re.IGNORECASE,
+    )
+
+
+def _source_ref(index: int, lang: str) -> str:
+    return f"Source {index}" if lang == "EN" else f"Kaynak {index}"
+
+
+def _replace_detail_urls_with_source_refs(text: str, sources: list[str], lang: str) -> str:
+    value = text or ""
+    if not value:
+        return value
+
+    cleaned_sources = _clean_sources(sources)
+    source_index = {source.rstrip(".,)]"): i + 1 for i, source in enumerate(cleaned_sources)}
+
+    def label_for(raw_url: str) -> str:
+        normalized = (raw_url or "").rstrip(".,)]")
+        index = source_index.get(normalized)
+        if index is None:
+            for source, idx in source_index.items():
+                if normalized.startswith(source) or source.startswith(normalized):
+                    index = idx
+                    break
+        if index is None:
+            index = len(source_index) + 1
+            source_index[normalized] = index
+        return _source_ref(index, lang)
+
+    def replace_markdown_link(match: re.Match) -> str:
+        label = match.group(1).strip()
+        ref = label_for(match.group(2))
+        if not label or label.lower().startswith(("http://", "https://")):
+            return ref
+        return f"{label} ({ref})"
+
+    value = re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)", replace_markdown_link, value)
+
+    def replace_bare_url(match: re.Match) -> str:
+        raw = match.group(0)
+        trimmed = raw.rstrip(".,)]")
+        suffix = raw[len(trimmed):]
+        return f"{label_for(trimmed)}{suffix}"
+
+    return re.sub(r"https?://[^\s)\]]+", replace_bare_url, value)
+
+
 def _parse_agent_output(raw: str, language: str = "TR", detail_level: str = "normal") -> dict:
     text = raw or ""
     lang = (language or "TR").upper()
@@ -310,6 +364,8 @@ def _parse_agent_output(raw: str, language: str = "TR", detail_level: str = "nor
         kaynaklar = re.findall(r"https?://[^\s)\]]+", text)
 
     kaynaklar = _clean_sources(kaynaklar)
+    detayli_analiz = _remove_inline_evidence_label_urls(detayli_analiz)
+    detayli_analiz = _replace_detail_urls_with_source_refs(detayli_analiz, kaynaklar, lang)
     karar = _normalize_decision(karar, lang)
     guven_skoru = guven_skoru or "%0"
 
@@ -324,7 +380,6 @@ def _parse_agent_output(raw: str, language: str = "TR", detail_level: str = "nor
         "analiz_modu": detail_level,
         "dil": lang,
         "generated_at": now_iso(),
-        "raw": raw,
     }
 
 
@@ -505,6 +560,7 @@ def get_chat(chat_id: int, authorization: Optional[str] = Header(None)):
         item = dict(row)
         if item.get("result_json"):
             item["result"] = json.loads(item["result_json"])
+            item["result"].pop("raw", None)
         item.pop("result_json", None)
         messages.append(item)
     return {"chat": dict(chat), "messages": messages}

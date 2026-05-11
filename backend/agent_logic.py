@@ -451,6 +451,26 @@ class VerificationAgent:
         lowered = (detail_text or "").lower()
         return all(h.lower() in lowered for h in self._required_detail_headings())
 
+    def _detail_uses_generic_template(self, detail_text):
+        lowered = (detail_text or "").lower()
+        generic_markers = [
+            "bu iddia, kullanıcı girdisi ve toplanan kanıtlar birlikte",
+            "amaç tek bir ifadeyi tekrar etmek değil",
+            "kaynakların güvenilirliği; bağlantı verilebilirlik",
+            "elde edilen bulgular bir arada değerlendirildiğinde",
+            "kaynaklar, iddiayla doğrudan ilgili olup olmadıklarına",
+            "sonuç, kaynakların açıkça desteklediği bilgiyle sınırlıdır",
+            "bu analiz şu kullanıcı isteğine odaklanır",
+            "the claim was evaluated by combining the user input",
+            "the goal is to test factual consistency",
+            "source quality is assessed by consistency",
+            "the combined evidence provides a structured",
+            "sources are weighed by whether they are traceable",
+            "the conclusion is limited to what the cited sources actually support",
+            "the analysis focuses on this user request",
+        ]
+        return any(marker in lowered for marker in generic_markers)
+
     def _replace_detail_section(self, content, detail_text):
         body = (detail_text or "").strip()
         if self.language == "EN":
@@ -466,53 +486,137 @@ class VerificationAgent:
             return re.sub(pattern, repl, content or "", count=1, flags=re.DOTALL)
         return f"{(content or '').strip()}\n\n{repl}".strip()
 
-    def _build_fallback_detail(self, context_text):
-        ctx = " ".join((context_text or "").split())
-        ctx_excerpt = ctx[:900] if ctx else "Yeterli kanıt metni otomatik olarak sınırlı kaldı."
+    def _claim_from_context(self, context_text):
+        text = context_text or ""
+        patterns = [
+            r"^\s*(?:IDDIA/SORU|İDDİA/SORU|IDDIA|İDDİA|Girdi|Input|CLAIM/QUESTION|CLAIM):\s*(.+)$",
+            r"^\s*Kullanıcı sorusu:\s*(.+)$",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, flags=re.MULTILINE | re.IGNORECASE)
+            if match:
+                return match.group(1).strip()[:500]
+        return "Kullanıcının sorduğu iddia/soru"
+
+    def _evidence_snippets_from_context(self, context_text, limit=4):
+        text = context_text or ""
+        snippets = []
+        seen = set()
+
+        for match in re.finditer(r"^\s*-\s*([^:\n]{3,160}):\s*(.+?)(?:\s*\(https?://[^\s)]+\))?\s*$", text, flags=re.MULTILINE):
+            title = re.sub(r"https?://\S+", "", match.group(1)).strip(" -")
+            snippet = re.sub(r"https?://\S+", "", match.group(2)).strip(" -")
+            if not title or not snippet:
+                continue
+            combined = f"{title}: {snippet}"
+            key = combined.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            snippets.append(combined[:520])
+            if len(snippets) >= limit:
+                return snippets
+
+        cleaned = re.sub(r"https?://\S+", "", " ".join(text.split()))
+        for piece in re.split(r"(?<=[.!?])\s+", cleaned):
+            piece = piece.strip()
+            if len(piece) < 60:
+                continue
+            key = piece[:180].lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            snippets.append(piece[:520])
+            if len(snippets) >= limit:
+                break
+
+        return snippets
+
+    def _format_fallback_evidence_lines(self, context_text):
+        snippets = self._evidence_snippets_from_context(context_text)
+        if not snippets:
+            snippets = ["Yeterli kanıt metni otomatik olarak sınırlı kaldı."]
+
+        if self.language == "EN":
+            return "\n\n".join(
+                f"- Source {i}: {snippet}. This finding is used only as evidence for the part of the claim it directly addresses."
+                for i, snippet in enumerate(snippets, 1)
+            )
+
+        return "\n\n".join(
+            f"- Kaynak {i}: {snippet}. Bu bulgu, iddianın doğrudan temas ettiği kısmı değerlendirmek için kullanıldı."
+            for i, snippet in enumerate(snippets, 1)
+        )
+
+    def _short_fields_from_output(self, normalized_text):
+        text = normalized_text or ""
+        if self.language == "EN":
+            short = self._extract_section(text, "[SHORT SUMMARY]", "[SHORT SUMMARY END]")
+            decision = re.search(r"^\s*DECISION:\s*(.+)$", short, flags=re.MULTILINE)
+            confidence = re.search(r"^\s*CONFIDENCE SCORE:\s*(.+)$", short, flags=re.MULTILINE)
+            brief = re.search(r"^\s*BRIEFLY:\s*(.+)$", short, flags=re.MULTILINE)
+            return {
+                "decision": (decision.group(1).strip() if decision else "Uncertain"),
+                "confidence": (confidence.group(1).strip() if confidence else "50%"),
+                "brief": (brief.group(1).strip() if brief else "The available evidence does not fully settle the claim."),
+            }
+
+        short = self._extract_section(text, "[KISA OZET]", "[KISA OZET SONU]")
+        decision = re.search(r"^\s*KARAR:\s*(.+)$", short, flags=re.MULTILINE)
+        confidence = re.search(r"^\s*G[ÜU]VEN SKORU:\s*(.+)$", short, flags=re.MULTILINE)
+        brief = re.search(r"^\s*KISACA:\s*(.+)$", short, flags=re.MULTILINE)
+        return {
+            "decision": (decision.group(1).strip() if decision else "Şüpheli"),
+            "confidence": (confidence.group(1).strip() if confidence else "%50"),
+            "brief": (brief.group(1).strip() if brief else "Eldeki kanıtlar iddiayı tamamen netleştirmiyor."),
+        }
+
+    def _build_fallback_detail(self, context_text, normalized_text=""):
+        claim_text = self._claim_from_context(context_text)
+        snippets = self._evidence_snippets_from_context(context_text)
+        source_count = max(1, len(snippets))
+        evidence_lines = self._format_fallback_evidence_lines(context_text)
+        short = self._short_fields_from_output(normalized_text)
+        source_refs = ", ".join(
+            f"Source {i}" if self.language == "EN" else f"Kaynak {i}"
+            for i in range(1, source_count + 1)
+        )
 
         if self.language == "EN":
             return (
                 "DETAILED ANALYSIS:\n"
                 "## Question or Claim\n"
-                "The claim was evaluated by combining the user input with the collected evidence. "
-                "The goal is to test factual consistency, timeline coherence, and source alignment rather than rely on a single statement. "
-                "When evidence is incomplete, the analysis remains cautious and explicitly marks uncertainty.\n\n"
+                f"The user is asking about this specific claim/question: {claim_text}. "
+                f"The analysis checks whether the available sources directly support the answer summarized as '{short['decision']}'.\n\n"
                 "## What the Evidence Says\n"
-                f"Evidence snapshot: {ctx_excerpt}. "
-                "Supporting signals and conflicting signals are read together to avoid confirmation bias. "
-                "If multiple sources repeat similar points independently, confidence increases; if they diverge materially, confidence is reduced.\n\n"
+                f"{evidence_lines}\n\n"
                 "## Source Reliability\n"
-                "Source quality is assessed by consistency, verifiability, and whether links are traceable. "
-                "Unattributed or weakly sourced claims are treated as lower reliability. "
-                "Directly linked evidence is prioritized over paraphrased or ambiguous statements.\n\n"
+                f"{source_refs} are used only for the parts of the claim they directly discuss. "
+                f"The confidence level ({short['confidence']}) depends on how clearly these sources support the short answer, not on the number of links alone.\n\n"
                 "## Conclusion\n"
-                "The combined evidence provides a structured but provisional conclusion. "
-                "This conclusion reflects currently available signals and should be updated if stronger or newer sources appear."
+                f"Decision: {short['decision']}. {short['brief']} "
+                f"The confidence score is {short['confidence']} because the conclusion is tied to the source findings listed above."
             )
 
         return (
             "DETAYLI ANALİZ:\n"
             "## Soru/İddia Çerçevesi\n"
-            "Bu iddia, kullanıcı girdisi ve toplanan kanıtlar birlikte ele alınarak değerlendirildi. "
-            "Amaç tek bir ifadeyi tekrar etmek değil, iddianın olgusal tutarlılığını ve zaman bağlamını kontrol etmektir. "
-            "Kanıtlar sınırlı olduğunda sonuç temkinli biçimde sunulur.\n\n"
+            f"Kullanıcının kontrol edilmesini istediği ifade/soru şudur: {claim_text}. "
+            f"Bu bölüm, kısa özette verilen '{short['decision']}' kararının hangi bulgulara dayandığını açıklar.\n\n"
             "## Kanıtların Söylediği\n"
-            f"Kanıt özeti: {ctx_excerpt}. "
-            "Destekleyen noktalar ile çelişen noktalar aynı anda okunarak dengeli bir değerlendirme yapıldı. "
-            "Farklı kaynaklarda bağımsız benzerlik arttıkça güven artar; ciddi uyumsuzlukta güven düşürülür.\n\n"
+            f"{evidence_lines}\n\n"
             "## Kaynak Güvenilirliği\n"
-            "Kaynakların güvenilirliği; bağlantı verilebilirlik, içerik tutarlılığı ve doğrulanabilirlik kriterleriyle ele alındı. "
-            "Kaynak göstermeyen veya zayıf dayanaklı ifadeler daha düşük güvenle yorumlandı. "
-            "Doğrudan bağlantılı bulgular, dolaylı ve belirsiz ifadelere göre daha yüksek ağırlık aldı.\n\n"
+            f"{source_refs}, sadece iddiayla doğrudan temas ettiği kısımlar için dikkate alındı. "
+            f"Güven skoru ({short['confidence']}), link sayısından çok bu kaynakların kısa özetteki cevabı ne kadar açık desteklediğine göre yorumlandı.\n\n"
             "## Sonuç\n"
-            "Elde edilen bulgular bir arada değerlendirildiğinde, sonuç mevcut kanıtlarla sınırlı ama tutarlı bir çerçevede verildi. "
-            "Daha güçlü veya yeni kaynaklar geldikçe sonucun güncellenmesi gerekir."
+            f"Karar: {short['decision']}. {short['brief']} "
+            f"Bu nedenle sonuç, yukarıdaki {source_refs} bulgularının desteklediği ölçüde verildi."
         )
 
     def _ensure_detail_quality(self, normalized_text, context_text, links):
         out = self._append_bibliography_if_missing(normalized_text, links)
         if self._needs_detail_rewrite(out):
-            out = self._replace_detail_section(out, self._build_fallback_detail(context_text))
+            out = self._replace_detail_section(out, self._build_fallback_detail(context_text, out))
             out = self._append_bibliography_if_missing(out, links)
         return out
 
@@ -619,6 +723,8 @@ class VerificationAgent:
         detail_text = (detail or "").strip()
         if self._detail_looks_like_summary(detail_text):
             return True
+        if self._detail_uses_generic_template(detail_text):
+            return True
         if not self._detail_has_required_headings(detail_text):
             return True
         return len(detail_text) < self.detail_min_chars
@@ -640,6 +746,13 @@ Requirements:
   - ## What the Evidence Says
   - ## Source Reliability
   - ## Conclusion
+- Every heading must be specific to the user's claim/question; do not use reusable template language.
+- "## Question or Claim": restate the exact claim/question and explain what must be proven or answered.
+- "## What the Evidence Says": write separate bullet lines as "- Source 1: ...", "- Source 2: ...".
+- In each source bullet, say what that source found and how it affects the claim. Do not paste URLs here.
+- "## Source Reliability": discuss Source 1, Source 2, etc. by relevance and reliability, not as generic rules.
+- "## Conclusion": give the direct final answer and tie it to the evidence above.
+- Replace all parenthetical/template instructions with real analysis; do not copy the instruction text into the answer.
 - [DETAILS] must be clear, evidence-led and at least {self.detail_min_chars} characters.
 - End with a short conclusion.
 """
@@ -659,6 +772,13 @@ Kurallar:
   - ## Kanıtların Söylediği
   - ## Kaynak Güvenilirliği
   - ## Sonuç
+- Her başlık kullanıcının gerçek sorusuna/iddiasına özel doldurulsun; tekrar kullanılabilir kalıp cümle yazma.
+- "## Soru/İddia Çerçevesi": iddiayı/soruyu net biçimde yeniden kur ve neyin kanıtlanması veya cevaplanması gerektiğini açıkla.
+- "## Kanıtların Söylediği": ayrı maddeler halinde "- Kaynak 1: ...", "- Kaynak 2: ..." formatını kullan.
+- Her kaynak maddesinde o kaynağın ne bulduğunu ve iddiayı nasıl etkilediğini yaz. Buraya URL/link koyma.
+- "## Kaynak Güvenilirliği": Kaynak 1, Kaynak 2 gibi tek tek değerlendir; genel-geçer güvenilirlik cümleleri yazma.
+- "## Sonuç": doğrudan nihai cevabı ver ve bunu yukarıdaki kanıtlara bağla.
+- Parantezli/şablon yönergeleri gerçek analizle değiştir; yönerge metnini cevaba kopyalama.
 - [DETAY] bölümü kanıta dayalı, net ve en az {self.detail_min_chars} karakter olsun.
 - Sonunda kısa bir sonuç ver.
 """
@@ -691,6 +811,108 @@ Kurallar:
                 break
 
         return queries or [fallback]
+
+    def _looks_english_query(self, query):
+        text = (query or "").strip()
+        if not text:
+            return False
+
+        if re.search(r"[\u00c7\u00d6\u00dc\u011e\u0130\u015e\u00e7\u00f6\u00fc\u011f\u0131\u015f]", text):
+            return False
+
+        tokens = set(re.findall(r"[a-zA-Z]+", text.lower()))
+        if not tokens:
+            return False
+
+        turkish_markers = {
+            "aciklama", "ara", "arastirma", "belge", "bir", "bu", "da", "de",
+            "dogru", "guncel", "haber", "hangi", "icin", "iddia", "kaynak",
+            "kim", "kimdir", "mi", "mu", "midir", "nedir", "ne", "neden",
+            "nasil", "nerede", "oldu", "olan", "son", "turkce", "turkiye",
+            "ve", "veya", "yanlis",
+        }
+        if tokens & turkish_markers:
+            return False
+
+        english_markers = {
+            "a", "about", "after", "against", "and", "are", "as", "can",
+            "claim", "date", "did", "died", "does", "evidence", "fact", "for",
+            "from", "how", "in", "is", "latest", "married", "news", "of",
+            "official", "on", "or", "report", "source", "the", "to", "true",
+            "verify", "was", "were", "what", "when", "where", "whether", "who",
+            "why", "with",
+        }
+        return bool(tokens & english_markers)
+
+    def _looks_turkish_text(self, text):
+        text = (text or "").strip()
+        if not text:
+            return False
+
+        if re.search(r"[\u00c7\u00d6\u00dc\u011e\u0130\u015e\u00e7\u00f6\u00fc\u011f\u0131\u015f]", text):
+            return True
+
+        tokens = set(re.findall(r"[a-zA-Z]+", text.lower()))
+        turkish_markers = {
+            "acaba", "aciklama", "ara", "arastir", "arastirma", "bana",
+            "belge", "bir", "bu", "da", "de", "dogru", "guncel", "haber",
+            "hangi", "icin", "iddia", "kac", "kaynak", "kim", "kimdir", "mi",
+            "mu", "midir", "nedir", "ne", "neden", "nasil", "nerede", "oldu",
+            "olan", "son", "turkce", "turkiye", "ve", "veya", "yanlis",
+        }
+        return bool(tokens & turkish_markers)
+
+    def _english_search_query(self, text, sys_instr):
+        prompt = f"""
+Rewrite the Turkish input below as one concise English Google search query.
+Preserve names, dates, numbers, quoted phrases, and URLs.
+Return only the query, with no bullets and no explanation.
+
+Input: {text}
+"""
+        try:
+            raw = self._generate_content(
+                prompt,
+                sys_instr,
+                generation_config={"temperature": 0.05, "max_output_tokens": 60},
+            )
+        except Exception:
+            return ""
+
+        candidate = re.split(r"[\n,;]+", (raw or "").strip(), maxsplit=1)[0]
+        candidate = re.sub(r"^\s*[-*\d\.\)]\s*", "", candidate).strip().strip("\"'`")
+        if len(candidate) < 3:
+            return ""
+        return candidate
+
+    def _ensure_cross_language_queries(self, queries, effective_input, sys_instr):
+        limit = max(1, self.max_queries)
+        base = list(queries[:limit]) or [effective_input]
+
+        if self.language != "TR" and not self._looks_turkish_text(effective_input):
+            return base
+
+        if any(self._looks_english_query(q) for q in base):
+            return base
+
+        english_query = self._english_search_query(effective_input, sys_instr)
+        if not english_query:
+            return base
+
+        seen = {q.strip().lower() for q in base}
+        if english_query.strip().lower() in seen:
+            return base
+
+        if len(base) < limit:
+            base.append(english_query)
+        else:
+            base[-1] = english_query
+        return base
+
+    def _search_job_for_query(self, query):
+        if self.language == "EN" or self._looks_english_query(query):
+            return {"query": query, "hl": "en", "gl": "us"}
+        return {"query": query, "hl": "tr", "gl": "tr"}
 
     def _build_evidence_block(self, queries, search_results):
         sections = []
@@ -1006,6 +1228,9 @@ LINKED CONTENT: {link_content}
 {date_guardrails}
 
 {conversation_block}TASK: Answer the user's actual question. If this is a factual claim, verify it; if this is an open question, answer it directly from the linked content. Return EXACT format.
+Make every DETAILS subsection specific to this claim/question. Do not use generic reusable wording.
+Do not paste URLs inside DETAILS; only refer to the linked content as Source 1. Put links only in SOURCES.
+Replace the guidance lines below with real analysis; do not copy the guidance text itself.
 
 [SHORT SUMMARY]
 DECISION: (True / False / Uncertain / Answered)
@@ -1016,9 +1241,14 @@ BRIEFLY: (2-3 clear sentences, include the direct answer and short why)
 [DETAILS]
 DETAILED ANALYSIS:
 ## Question or Claim
+- Restate the exact user claim/question in one specific paragraph.
+- Explain what would make it true, false, uncertain, or answered.
 ## What the Evidence Says
+- Source 1: Explain what the linked content says and how it affects the claim. Do not include a URL here.
 ## Source Reliability
+- Evaluate this source specifically: relevance to the user's question, recency if important, and whether the content directly supports the answer.
 ## Conclusion
+- Give the direct final answer and explain why the decision/confidence follows from the evidence.
 SOURCES: Link provided above
 [DETAILS END]
 """
@@ -1031,6 +1261,9 @@ LINK ICERIGI: {link_content}
 {date_guardrails}
 
 {conversation_block}GOREV: Kullanıcının gerçek sorusunu cevapla. Bu bir doğrulama iddiasıysa teyit et; açık uçlu bir soruysa link içeriğine dayanarak doğrudan yanıtla. Tam olarak aşağıdaki formatı döndür.
+DETAY içindeki her başlık bu soruya/iddiaya özel dolsun; genel-geçer kalıp cümle yazma.
+DETAY içinde URL/link yazma; link içeriğine sadece Kaynak 1 diye atıf yap. Link sadece KAYNAKLAR satırında yer alsın.
+Aşağıdaki yönerge satırlarını gerçek analizle değiştir; yönerge metnini olduğu gibi kopyalama.
 
 [KISA OZET]
 KARAR: (Doğru / Yanlış / Şüpheli / Yanıtlandı)
@@ -1041,9 +1274,14 @@ KISACA: (2-3 net cümle; doğrudan cevabı ve kısa gerekçeyi yaz)
 [DETAY]
 DETAYLI ANALİZ:
 ## Soru/İddia Çerçevesi
+- Kullanıcının sorduğu şeyi/iddiasını tek ve somut bir paragrafta yeniden kur.
+- Neyin doğru, yanlış, şüpheli veya yanıtlanmış sayılacağını açıkla.
 ## Kanıtların Söylediği
+- Kaynak 1: Link içeriğinin ne söylediğini ve iddiayı nasıl etkilediğini açıkla. Buraya URL yazma.
 ## Kaynak Güvenilirliği
+- Kaynak 1'i özel olarak değerlendir: soruyla ilgisi, gerekiyorsa güncelliği ve cevabı doğrudan destekleyip desteklemediği.
 ## Sonuç
+- Nihai cevabı doğrudan ver ve karar/güven skorunun kanıttan nasıl çıktığını açıkla.
 KAYNAKLAR: Yukarıdaki link
 [DETAY SONU]
 """
@@ -1088,6 +1326,7 @@ Return only queries separated by commas.
                 planner_prompt = f"""
 {conversation_block}Girdi: {effective_input}
 Bu soru veya iddiayı cevaplamak/teyit etmek için Google'da aranabilecek en etkili en fazla {self.max_queries} sorguyu üret.
+Girdi Turkce ise sorgularin en az biri ayni arama niyetinin dogal Ingilizce karsiligi olsun; etiket ekleme.
 Sadece sorguları virgülle ayırarak yaz.
 """
 
@@ -1107,9 +1346,16 @@ Sadece sorguları virgülle ayırarak yaz.
                 extra_contents=image_parts,
             )
             queries = self._parse_queries(plan_text, effective_input)
+            queries = self._ensure_cross_language_queries(queries, effective_input, sys_instr)
+            search_jobs = [self._search_job_for_query(q) for q in queries]
 
-            with ThreadPoolExecutor(max_workers=min(len(queries), self.max_queries)) as executor:
-                search_results = list(executor.map(lambda q: search_web(q, self.serp_key), queries[: self.max_queries]))
+            with ThreadPoolExecutor(max_workers=min(len(search_jobs), max(1, self.max_queries))) as executor:
+                search_results = list(
+                    executor.map(
+                        lambda job: search_web(job["query"], self.serp_key, hl=job["hl"], gl=job["gl"]),
+                        search_jobs,
+                    )
+                )
 
             all_evidence, all_links, unique_links = self._build_evidence_block(queries, search_results)
             semantic_evidence, semantic_links = self._build_semantic_evidence_block(effective_input, queries, search_results)
@@ -1129,6 +1375,9 @@ SEMANTICALLY RANKED EVIDENCE (Gemini Embedding):
 {date_guardrails}
 
 {conversation_block}TASK: Answer the user's actual question using the evidence. If this is a factual claim, verify it; if this is an open question, answer it directly and mark the decision as Answered. Produce the exact format below.
+Make every DETAILS subsection specific to this claim/question. Do not use generic reusable wording.
+In DETAILS, never paste URLs. Refer to sources only as Source 1, Source 2, etc. Put actual links only in SOURCES.
+Replace the guidance lines below with real analysis; do not copy the guidance text itself.
 
 [SHORT SUMMARY]
 DECISION: (True / False / Uncertain / Answered)
@@ -1139,9 +1388,16 @@ BRIEFLY: (2-3 clear sentences with the direct answer and short why)
 [DETAILS]
 DETAILED ANALYSIS:
 ## Question or Claim
+- Restate the exact user claim/question in one specific paragraph.
+- Explain what would make it true, false, uncertain, or answered.
 ## What the Evidence Says
+- Source 1: (Say what this source reports or shows, and how it affects the claim. Do not include a URL.)
+
+- Source 2: (Say what this source reports or shows, and how it affects the claim. Add more source bullets if useful. Do not include URLs.)
 ## Source Reliability
+- Discuss Source 1, Source 2, etc. specifically: relevance, recency if applicable, and whether they agree or conflict.
 ## Conclusion
+- Give the direct final answer and explain why the decision/confidence follows from the evidence.
 SOURCES: (Use only links from AVAILABLE LINKS)
 [DETAILS END]
 
@@ -1160,6 +1416,9 @@ ANLAMSAL OLARAK SIRALANMIS KANITLAR (Gemini Embedding):
 {date_guardrails}
 
 {conversation_block}GOREV: Kullanıcının gerçek sorusunu kanıtlara göre cevapla. Bu bir doğrulama iddiasıysa teyit et; açık uçlu bir soruysa doğrudan yanıtla ve kararı "Yanıtlandı" yaz. Tam olarak aşağıdaki formatı döndür.
+DETAY içindeki her başlık bu soruya/iddiaya özel dolsun; genel-geçer kalıp cümle yazma.
+DETAY içinde URL/link yazma. Kanıtları sadece Kaynak 1, Kaynak 2 gibi adlandır. Gerçek linkler sadece KAYNAKLAR bölümünde yer alsın.
+Aşağıdaki yönerge satırlarını gerçek analizle değiştir; yönerge metnini olduğu gibi kopyalama.
 
 [KISA OZET]
 KARAR: (Doğru / Yanlış / Şüpheli / Yanıtlandı)
@@ -1170,9 +1429,16 @@ KISACA: (2-3 net cümle; doğrudan cevabı ve kısa gerekçeyi yaz)
 [DETAY]
 DETAYLI ANALİZ:
 ## Soru/İddia Çerçevesi
+- Kullanıcının sorduğu şeyi/iddiasını tek ve somut bir paragrafta yeniden kur.
+- Neyin doğru, yanlış, şüpheli veya yanıtlanmış sayılacağını açıkla.
 ## Kanıtların Söylediği
+- Kaynak 1: (Bu kaynağın ne söylediğini ve iddiayı nasıl etkilediğini açıkla. URL yazma.)
+
+- Kaynak 2: (Bu kaynağın ne söylediğini ve iddiayı nasıl etkilediğini açıkla. Gerekirse daha fazla kaynak maddesi ekle. URL yazma.)
 ## Kaynak Güvenilirliği
+- Kaynak 1, Kaynak 2 gibi tek tek değerlendir: alaka düzeyi, güncellik gerekiyorsa tarih, kaynakların uyuşup uyuşmadığı.
 ## Sonuç
+- Nihai cevabı doğrudan ver ve karar/güven skorunun kanıtlardan nasıl çıktığını açıkla.
 KAYNAKLAR: (Sadece MEVCUT LİNKLER listesinden seç, uydurma link yazma)
 [DETAY SONU]
 
