@@ -424,6 +424,7 @@ function App() {
           body: JSON.stringify({ text: userText, language, detail_level: "detailed", chat_id: activeChatId })
         }, authToken);
       }
+      const finalResult = data.analysis ? data.analysis : data;
       setMessages((prev) => [...prev, { type: "result", result: data }]);
       if (data.chat_id) { setActiveChatId(data.chat_id); loadChats(); }
     } catch (err) {
