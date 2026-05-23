@@ -30,6 +30,8 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://www.deepverify.online",
+        "https://deepverify.online",
     ],
     allow_credentials=True,
     allow_methods=["*"],
